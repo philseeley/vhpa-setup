@@ -1,0 +1,60 @@
+---
+- hosts: vhpa_servers
+  tasks:
+    - name: install dotnet
+      dnf: name=dotnet state=latest
+
+    - name: install postgresql
+      dnf: name=postgresql-server,python3-psycopg2 state=latest
+      notify: restart postgresql
+
+    - name: add postgresql to firewall
+      firewalld:
+        service: postgresql
+        permanent: yes
+        state: enabled
+
+    - name: intialise DB
+      shell:
+        cmd: /usr/bin/postgresql-setup --initdb
+        creates: /var/lib/pgsql/data/PG_VERSION
+    
+    - name: enable TCP for DB
+      lineinfile:
+        path: /var/lib/pgsql/data/postgresql.conf
+        line: listen_addresses = '*'
+        regexp: ^listen_addresses
+      notify: restart postgresql
+
+    - name: enable password enc
+      lineinfile:
+        path: /var/lib/pgsql/data/postgresql.conf
+        line: password_encryption = scram-sha-256
+        regexp: ^password_encryption
+      notify: restart postgresql
+
+    - name: configure authentication
+      postgresql_pg_hba:
+        dest: /var/lib/pgsql/data/pg_hba.conf
+        contype: host
+        users: siteguide
+        address: all
+        databases: siteguide
+        method: scram-sha-256
+      notify: restart postgresql
+
+    - meta: flush_handlers
+
+    - name: create DB user
+      postgresql_user: name=siteguide password={{ siteguide_db_password }}
+      become: true
+      become_user: postgres
+
+    - name: create DB
+      postgresql_db: name=siteguide owner=siteguide
+      become: true
+      become_user: postgres
+
+  handlers:
+    - name: restart postgresql
+      service: name=postgresql enabled=true state=restarted
