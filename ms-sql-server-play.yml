@@ -1,0 +1,27 @@
+---
+- hosts: vhpa_servers
+  tasks:
+    - name: add MS sqlserver repo
+      yum_repository:
+        name: mssql-server
+        description: packages-microsoft-com-mssql-server-2019
+        baseurl: https://packages.microsoft.com/rhel/8/mssql-server-2019/
+        gpgcheck: 1
+        gpgkey: https://packages.microsoft.com/keys/microsoft.asc
+
+    - name: install MS sqlserver dependancies
+      dnf: name=python2,compat-openssl10 state=latest
+
+    - name: set python to python2
+      alternatives:
+        name: python
+        path: /usr/bin/python2
+
+    - name: install MS sqlserver
+      dnf: name=mssql-server state=latest
+
+    - name: initialise sqlserver
+      shell:
+        cmd: /opt/mssql/bin/mssql-conf setup
+        creates: /var/opt/mssql/mssql.conf
+
