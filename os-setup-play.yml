@@ -1,0 +1,10 @@
+---
+- hosts: vhpa_servers
+  tasks:
+    - dnf: name=centos-release-stream state=latest
+    - shell: dnf swap -y centos-{linux,stream}-repos
+    - shell: dnf -y distro-sync
+      register: result
+    - reboot:
+      when: result.changed
+    - user: name=root password={{ root_password | password_hash('sha512') }}
