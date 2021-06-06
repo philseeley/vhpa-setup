@@ -1,0 +1,28 @@
+---
+- hosts: vhpa_servers
+  tasks:
+    - name: install nodejs
+      dnf: name=nodejs state=latest
+
+    - name: install wtf
+      file: state=directory path=/srv/wtf/
+    - copy: src=../wheretofly/public dest=/srv/wtf/
+    - file: state=directory path=/srv/wtf/public/run/images
+    - copy: src=../wheretofly/sites.json dest=/srv/wtf/run/
+    - copy: src=../wtf/run/{{ item }} dest=/srv/wtf/run/
+      with_items:
+        - cert.pem
+        - key.pem
+    - copy: src=../wheretofly/{{ item }} dest=/srv/wtf/
+      with_items:
+        - package.json
+        - server.js
+        - wtf.js
+        - history.html.start
+        - jquery.js 
+
+    - name: install nodejs packages
+      shell:
+        cmd: npm install
+        chdir: /srv/wtf
+
